@@ -26,6 +26,7 @@ func main() {
 	var api_uri = flag.String("uri", "http:/127.0.0.1:19080", "nextjtag server API, default=http://127.0.0.1:19080")
 	var num_columns = flag.Int("num_columns", 1, "number of columns to display")
 	var column_size = flag.Int("column_size", 4, "column size in bytes. Options: 1,2,4,8")
+	var write_data = flag.Uint64("write_data", 0, "write data, can be up to 64-bits")
 	flag.Parse()
 
 	mod := *addr % 4
@@ -85,8 +86,18 @@ func main() {
 		log.Fatalln("failed to create AxiTransactionOptions!, ", err)
 	}
 	// FIXME: add write support
-	var data *[]uint32
-	t := njclient.NewAxiTransaction(*addr, *rnw, opts, attr, data)
+
+	var data []uint32
+	if *size == 4 {
+		data = append(data, (uint32)((*write_data)&0xffffffff))
+	} else if *size == 8 {
+		data = append(data, (uint32)((*write_data)&0xffffffff))
+		data = append(data, (uint32)(((*write_data)>>32)&0xffffffff))
+	} else {
+		log.Fatalln("sorry, only supporting write lengths of 4/8 bytes")
+	}
+
+	t := njclient.NewAxiTransaction(*addr, *rnw, opts, attr, &data)
 	if t == nil {
 		log.Fatalln("failed to create AxiTransaction, ", err)
 	}
