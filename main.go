@@ -23,7 +23,7 @@ func main() {
 	var incr_mode = flag.Bool("incr_mode", true, "increment or fixed burst mode")
 	var board_id = flag.String("board", "", "board ID")
 	var fpga_index = flag.Int("fpga", 0x0, "FPGA index")
-	var api_uri = flag.String("uri", "http:/127.0.0.1:19080", "nextjtag server API, default=http://127.0.0.1:19080")
+	//	var api_uri = flag.String("uri", "http:/127.0.0.1:19080", "nextjtag server API, default=http://127.0.0.1:19080")
 	var num_columns = flag.Int("num_columns", 1, "number of columns to display")
 	var column_size = flag.Int("column_size", 4, "column size in bytes. Options: 1,2,4,8")
 	var write_data = flag.Uint64("write_data", 0, "write data, can be up to 64-bits")
@@ -35,8 +35,10 @@ func main() {
 	}
 
 	config := &njclient.Config{APIVersion: "v1"}
-	client := njclient.NewClient(config, *api_uri)
+	url := "http://127.0.0.1:19080"
+	client := njclient.NewClient(config, url)
 	_, err := client.GetServerVersion()
+	log.Printf("connected to client at %s\n", url)
 	if err != nil {
 		log.Fatalln("unable to get version: ", err)
 	} //else {
@@ -86,15 +88,16 @@ func main() {
 		log.Fatalln("failed to create AxiTransactionOptions!, ", err)
 	}
 	// FIXME: add write support
-
 	var data []uint32
-	if *size == 4 {
-		data = append(data, (uint32)((*write_data)&0xffffffff))
-	} else if *size == 8 {
-		data = append(data, (uint32)((*write_data)&0xffffffff))
-		data = append(data, (uint32)(((*write_data)>>32)&0xffffffff))
-	} else {
-		log.Fatalln("sorry, only supporting write lengths of 4/8 bytes")
+	if *rnw == false {
+		if *size == 4 {
+			data = append(data, (uint32)((*write_data)&0xffffffff))
+		} else if *size == 8 {
+			data = append(data, (uint32)((*write_data)&0xffffffff))
+			data = append(data, (uint32)(((*write_data)>>32)&0xffffffff))
+		} else {
+			log.Fatalln("sorry, only supporting write lengths of 4/8 bytes")
+		}
 	}
 
 	t := njclient.NewAxiTransaction(*addr, *rnw, opts, attr, &data)
